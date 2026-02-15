@@ -77,6 +77,7 @@ from typing import Optional
 SOURCE_DIRS = [
     "/Volumes/MattBook - Local/Oragnized and Numbered",
     "/Volumes/MattBook - Local/Oragnized and Numbered.backup.feb14th",
+    "/Volumes/MattBook - Local/Review and Import",
 ]
 
 DEST_DIR = "/Volumes/MattBook - Local/LivePhotoPairs"
