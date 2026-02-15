@@ -6,7 +6,7 @@
 #   ./run.sh --dry-run # scan only, no file moves
 #
 # Watch:
-#   tail -f logs/run_*.log   (or use watch_log.sh)
+#   tail -f $(ls -t logs/run_*.log | head -1)
 #
 # Stop:
 #   kill $(cat logs/live_photo_sort.pid)
@@ -20,18 +20,21 @@ mkdir -p logs
 
 VENV_PYTHON="$SCRIPT_DIR/venv/bin/python3"
 if [ ! -f "$VENV_PYTHON" ]; then
-    echo "venv not found — run: python3 -m venv venv"
+    echo "venv not found — run: python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
     exit 1
 fi
 
-LOG_FILE="logs/run_$(date +%Y%m%d_%H%M%S).log"
 echo "Starting LivePhotoSort…"
-echo "Log: $SCRIPT_DIR/$LOG_FILE"
 echo "Pass --dry-run to preview without moving files."
+echo "Log files: $SCRIPT_DIR/logs/"
 
-nohup "$VENV_PYTHON" live_photo_sort.py "$@" >> "$LOG_FILE" 2>&1 &
-echo "PID: $!"
-echo "$!" > logs/live_photo_sort.pid
+# Script writes its own timestamped log file. Don't redirect stdout here
+# or log lines will be duplicated. Suppress nohup output entirely.
+nohup "$VENV_PYTHON" live_photo_sort.py "$@" > /dev/null 2>&1 &
+PID=$!
+echo "$PID" > logs/live_photo_sort.pid
+
+echo "PID: $PID"
 echo ""
-echo "Watch with:  tail -f $LOG_FILE"
-echo "Stop with:   kill \$(cat logs/live_photo_sort.pid)"
+echo "Watch:  tail -f \$(ls -t $SCRIPT_DIR/logs/run_*.log | head -1)"
+echo "Stop:   kill \$(cat logs/live_photo_sort.pid)"
