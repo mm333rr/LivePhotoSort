@@ -1,0 +1,3 @@
+# LivePhotoSort — Requirements
+# No third-party dependencies: uses system Python 3.9+ stdlib and exiftool CLI
+# exiftool must be installed: brew install exiftool
