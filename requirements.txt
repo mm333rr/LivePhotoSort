@@ -1,3 +1,9 @@
 # LivePhotoSort — Requirements
-# No third-party dependencies: uses system Python 3.9+ stdlib and exiftool CLI
-# exiftool must be installed: brew install exiftool
+# Core script uses stdlib only; triage_sort.py uses these optional deps:
+#   pip install geopy tqdm
+#
+# exiftool must be installed:
+#   brew install exiftool
+
+geopy
+tqdm

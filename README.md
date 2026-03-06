@@ -97,11 +97,70 @@ kill -9 $(cat logs/live_photo_sort.pid)
 
 ```
 LivePhotoSort/
-├── live_photo_sort.py   # Main script
+├── live_photo_sort.py   # Main: scan + pair + copy
+├── triage_sort.py       # Post-process: sort by device + city
 ├── run.sh               # Background launcher
 ├── stop.sh              # Graceful shutdown
 ├── watch_log.sh         # Log tail helper
-├── requirements.txt     # (none — all stdlib + exiftool CLI)
+├── requirements.txt     # geopy + tqdm (for triage_sort)
 ├── venv/                # Python venv
 └── logs/                # Runtime logs + PID file
 ```
+
+---
+
+## triage_sort.py
+
+Reorganizes the `LivePhoto Import Ready` output into a hierarchy by **device model** and **city**, with pairs and orphans cleanly separated.
+
+### Output structure
+```
+<dest>/sorted/
+  pairs/
+    iPhone 14 Pro/
+      Ventura, California/
+        2025-02-19_LivePhoto_XXXX.jpeg
+        2025-02-19_LivePhoto_XXXX.mov
+  orphans/
+    stills/
+      iPhone 12/
+        Los Angeles, California/
+    movs/
+      Unknown Device/
+        Unknown Location/
+  triage_geocache.json
+```
+
+### Setup
+```bash
+source venv/bin/activate
+pip install geopy tqdm
+```
+
+### Usage
+```bash
+# Always dry-run first
+python triage_sort.py --dry-run
+
+# Full run
+python triage_sort.py
+
+# Skip reverse geocoding (use GPS coords as folder names)
+python triage_sort.py --no-geo
+
+# Custom paths
+python triage_sort.py \
+  --source "/Volumes/MattBook - Local/LivePhoto Import Ready" \
+  --dest   "/Volumes/MattBook - Local/LivePhoto Sorted"
+```
+
+### Flags
+| Flag | Default | Description |
+|---|---|---|
+| `--source` | `LivePhoto Import Ready` volume | Root of LivePhotoSort output |
+| `--dest` | `<source>/sorted` | Output tree root |
+| `--manifest` | Auto (newest manifest_*.json) | Explicit manifest path |
+| `--dry-run` | off | Preview only |
+| `--workers` | 8 | Parallel exiftool workers |
+| `--no-geo` | off | GPS coords instead of city names |
+| `--cache` | `<dest>/triage_geocache.json` | Geocode cache |
