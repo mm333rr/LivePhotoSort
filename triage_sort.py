@@ -60,7 +60,7 @@ from typing import Dict, List, Optional, Tuple
 
 # ── Optional deps ──────────────────────────────────────────────────────────
 try:
-    from geopy.geocoders import Nominatim
+    from geopy.geocoders import Photon
     from geopy.exc import GeocoderTimedOut, GeocoderServiceError
     HAS_GEOPY = True
 except ImportError:
@@ -90,7 +90,7 @@ log = logging.getLogger(__name__)
 DEFAULT_SOURCE = Path("/Volumes/MattBook - Local/LivePhoto Import Ready")
 UNKNOWN_DEVICE = "Unknown Device"
 UNKNOWN_LOCATION = "Unknown Location"
-GEOCODE_DELAY = 1.1  # Nominatim: max 1 req/sec
+GEOCODE_DELAY = 0.5  # Photon (Komoot): generous limits, ~2 req/sec safe
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -187,7 +187,8 @@ def parse_coord(value, ref: str) -> Optional[float]:
             mins = float(nums[1]) if len(nums) > 1 else 0.0
             secs = float(nums[2]) if len(nums) > 2 else 0.0
             dec = deg + mins / 60 + secs / 3600
-        if ref and ref.upper() in ("S", "W"):
+        ref_up = ref.upper() if ref else ""
+        if ref_up in ("S", "W", "SOUTH", "WEST") or str(value).strip().endswith((" S", " W")):
             dec = -dec
         return round(dec, 6)
     except Exception:
@@ -246,16 +247,18 @@ def reverse_geocode(lat: float, lon: float, geo, cache: GeoCache) -> str:
         return hit
     try:
         time.sleep(GEOCODE_DELAY)
-        loc = geo.reverse(f"{lat}, {lon}", exactly_one=True, timeout=10, language="en")
-        if loc and loc.raw.get("address"):
-            addr = loc.raw["address"]
-            city = (addr.get("city") or addr.get("town") or addr.get("village")
-                    or addr.get("county") or "")
-            region = addr.get("state") or addr.get("country") or ""
+        loc = geo.reverse((lat, lon), exactly_one=True, timeout=10)
+        if loc and loc.raw.get("properties"):
+            props  = loc.raw["properties"]
+            city   = (props.get("city") or props.get("town") or props.get("village")
+                      or props.get("county") or props.get("municipality") or "")
+            region = props.get("state") or props.get("country") or ""
             if city and region and city != region:
                 result = f"{city}, {region}"
             else:
                 result = city or region or UNKNOWN_LOCATION
+        elif loc:
+            result = str(loc.address).split(",")[0].strip() or UNKNOWN_LOCATION
         else:
             result = UNKNOWN_LOCATION
     except Exception as e:
@@ -418,7 +421,7 @@ def main():
 
     cache_path = args.cache or (dest / "triage_geocache.json")
     cache = GeoCache(cache_path)
-    geo = Nominatim(user_agent="LivePhotoSort-triage/1.1") if HAS_GEOPY and not args.no_geo else None
+    geo = Photon(user_agent="LivePhotoSort-triage/1.1", timeout=10) if HAS_GEOPY and not args.no_geo else None
 
     enrichment = enrich(all_paths, args.workers, args.no_geo, geo, cache)
 
